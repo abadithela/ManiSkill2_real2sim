@@ -16,6 +16,7 @@ from mani_skill2_real2sim.agents.robots.googlerobot import (
     GoogleRobotStaticBaseHalfFingerFriction, GoogleRobotStaticBaseQuarterFingerFriction, GoogleRobotStaticBaseOneEighthFingerFriction, GoogleRobotStaticBaseTwiceFingerFriction
 )
 from mani_skill2_real2sim.agents.robots.widowx import WidowX, WidowXBridgeDatasetCameraSetup, WidowXSinkCameraSetup
+from mani_skill2_real2sim.agents.robots.irom_widowx import IROM_WidowX, IROM_WidowXBridgeDatasetCameraSetup, IROM_WidowXSinkCameraSetup
 from mani_skill2_real2sim.agents.robots.panda import Panda
 from mani_skill2_real2sim.envs.sapien_env import BaseEnv
 from mani_skill2_real2sim.sensors.camera import CameraConfig
@@ -26,11 +27,16 @@ from mani_skill2_real2sim.utils.sapien_utils import (
     vectorize_pose,
 )
 
+from pdb import set_trace as st
+
 class CustomSceneEnv(BaseEnv):
     SUPPORTED_ROBOTS = {"google_robot_static": GoogleRobotStaticBase, 
                         "widowx": WidowX,
                         "widowx_bridge_dataset_camera_setup": WidowXBridgeDatasetCameraSetup,
                         "widowx_sink_camera_setup": WidowXSinkCameraSetup,
+                        "irom_widowx": IROM_WidowX,
+                        "irom_widowx_bridge_dataset_camera_setup": IROM_WidowXBridgeDatasetCameraSetup,
+                        "irom_widowx_sink_camera_setup": IROM_WidowXSinkCameraSetup,
                         "panda": Panda,
                         # configs for ablation studies
                         "google_robot_static_worse_control1": GoogleRobotStaticBaseWorseControl1,
@@ -41,7 +47,7 @@ class CustomSceneEnv(BaseEnv):
                         "google_robot_static_one_eighth_finger_friction": GoogleRobotStaticBaseOneEighthFingerFriction,
                         "google_robot_static_twice_finger_friction": GoogleRobotStaticBaseTwiceFingerFriction,
     }
-    agent: Union[GoogleRobotStaticBase, WidowX, Panda]
+    agent: Union[GoogleRobotStaticBase, WidowX, IROM_WidowX, Panda]
     DEFAULT_ASSET_ROOT: str
     DEFAULT_SCENE_ROOT: str
     DEFAULT_MODEL_JSON: str
@@ -139,6 +145,7 @@ class CustomSceneEnv(BaseEnv):
     
     def _load_arena_helper(self, add_collision=True):
         builder = self._scene.create_actor_builder()
+        
         # scene path
         if self.scene_name is None:
             if 'google_robot_static' in self.robot_uid:
@@ -156,15 +163,24 @@ class CustomSceneEnv(BaseEnv):
         if self.scene_offset is None:
             if 'google_robot_static' in self.robot_uid:
                 scene_offset = np.array([-1.6616, -3.0337, 0.0]) # corresponds to the default offset of google_pick_coke_can_1_v4.glb
-            elif 'widowx' in self.robot_uid:
+            elif 'widowx' == self.robot_uid:
                 scene_offset = np.array([-2.0634, -2.8313, 0.0])# corresponds to the default offset of bridge_table_1_v1.glb
+            elif 'irom_widowx' == self.robot_uid:
+                tx, ty, tz = -2.2254, -2.7813, 0.758 # Table center with respect to origin in blender
+                scene_offset = np.array([tx, ty,0.0])# corresponds to the default offset of irom_bench.glb; the offset of the table from the origin.
+                # Setting lower left corner as origin in sim; coordinate convention here is according to blender; actual simpler convention comes later.
+                # Blender convention (from the top view of the table): z out, y right, x down
+                # SImpler convention (from top view of the table): x up, y (left/right?)
+                a = 0.146803
+                b = -0.379149
+                scene_offset = np.array([a+tx, b+ty,0]) # Table corner lower left
             else:
                 raise NotImplementedError(f"Default scene offset for {self.robot_uid} is not yet set")
         else:
             scene_offset = np.array(self.scene_offset)
-            
+        
         if self.scene_pose is None:
-            scene_pose = sapien.Pose(q=[0.707, 0.707, 0, 0])  # y-axis up for Habitat scenes
+            scene_pose = sapien.Pose(q=[0.7, 0.707, 0, 0])  # y-axis up for Habitat scenes
         else:
             scene_pose = sapien.Pose(q=self.scene_pose)
             
@@ -212,10 +228,17 @@ class CustomSceneEnv(BaseEnv):
                 builder.add_box_visual(half_size=np.array([10.0, 10.0, 0.017]), color=_color)
             else:
                 raise NotImplementedError(self.scene_name)
+
         self.arena = builder.build_static(name="arena")
         # Add offset so that the workspace is next to the table
-        
         self.arena.set_pose(sapien.Pose(-scene_offset))
+
+        # # Add origin marker
+        # origin_pose = sapien.Pose([0,0,-0.87])  # Origin position
+        # origin_half_size = np.array([0.5, 0.5, 0.5], dtype=np.float32)  # Small cube
+        # origin_color = np.array([1, 0, 0], dtype=np.float32)  # Red color
+        # builder.add_box_visual(pose=origin_pose, half_size=origin_half_size, color=origin_color)
+
         
     def _settle(self, t):
         # step the simulation and let the scene settle for t seconds
@@ -278,7 +301,11 @@ class CustomSceneEnv(BaseEnv):
         elif 'widowx' in self.robot_uid:
             if self.robot_uid in ['widowx', 'widowx_bridge_dataset_camera_setup']:
                 qpos = np.array([-0.01840777,  0.0398835,   0.22242722,  -0.00460194,  1.36524296,  0.00153398, 0.037, 0.037])
-            elif self.robot_uid == 'widowx_sink_camera_setup':
+            # TODO: Fix if necessary
+            elif self.robot_uid == 'irom_widowx':
+                qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,
+                                 0.037]) # TODO: Initialize sleep position?
+            elif self.robot_uid == 'widowx_sink_camera_setup' or self.robot_uid == "irom_widowx_sink_camera_setup":
                 qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,
                                  0.037])
             else:
@@ -286,7 +313,11 @@ class CustomSceneEnv(BaseEnv):
             
             if self.robot_uid in ['widowx', 'widowx_bridge_dataset_camera_setup']:
                 robot_init_height = 0.870
-            elif self.robot_uid == 'widowx_sink_camera_setup':
+            # TODO: Fix if necessary
+            elif self.robot_uid == 'irom_widowx':
+                # robot_init_height = self.scene_table_height + 0.025 # 2.5 cm offset in lab measurements.
+                robot_init_height = 0.87 + 0.04
+            elif self.robot_uid == 'widowx_sink_camera_setup' or self.robot_uid == 'irom_widowx_sink_camera_setup':
                 robot_init_height = 0.85
             else:
                 raise NotImplementedError(self.robot_uid)
@@ -313,7 +344,10 @@ class CustomSceneEnv(BaseEnv):
                 init_x = 0.147
                 if self.robot_uid in ['widowx', 'widowx_bridge_dataset_camera_setup']:
                     init_y = 0.028
-                elif self.robot_uid == 'widowx_sink_camera_setup':
+                # TODO: Fix if necessary
+                elif self.robot_uid == 'irom_widowx':
+                    init_y = 0.028
+                elif self.robot_uid == 'widowx_sink_camera_setup' or self.robot_uid == 'irom_widowx_sink_camera_setup':
                     init_y = 0.070
             else:
                 init_x, init_y = 0.0, 0.0

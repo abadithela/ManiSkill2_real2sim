@@ -7,7 +7,7 @@ from typing import List
 
 import numpy as np
 import sapien.core as sapien
-from transforms3d.euler import euler2quat
+from transforms3d.euler import euler2quat, quat2euler
 from transforms3d.quaternions import quat2mat
 
 from mani_skill2_real2sim.utils.common import random_choice
@@ -17,7 +17,9 @@ from mani_skill2_real2sim import ASSET_DIR
 from .base_env import CustomBridgeObjectsInSceneEnv
 from .move_near_in_scene import MoveNearInSceneEnv
 
-class PutOnInSceneEnv(MoveNearInSceneEnv):
+from pdb import set_trace as st 
+
+class PutOnInSceneEnvIROM(MoveNearInSceneEnv):
     def reset(self, *args, **kwargs):
         self.consecutive_grasp = 0
         return super().reset(*args, **kwargs)
@@ -149,7 +151,7 @@ class PutOnInSceneEnv(MoveNearInSceneEnv):
         return f"put {src_name} on {tgt_name}"
 
 
-class PutOnBridgeInSceneEnv(PutOnInSceneEnv, CustomBridgeObjectsInSceneEnv):
+class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneEnv):
     def __init__(
         self,
         source_obj_name: str = None,
@@ -166,14 +168,15 @@ class PutOnBridgeInSceneEnv(PutOnInSceneEnv, CustomBridgeObjectsInSceneEnv):
 
     def _setup_prepackaged_env_init_config(self):
         ret = {}
-        ret["robot"] = "widowx"
+        ret["robot"] = "irom_widowx"
         ret["control_freq"] = 5
         ret["sim_freq"] = 500
         ret["control_mode"] = "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos"
-        ret["scene_name"] = "bridge_table_1_v1"
+        ret["scene_name"] = "bridge_table_1_v2"
         ret["camera_cfgs"] = {"add_segmentation": True}
+        # This is the RGB overlay path that needs to change
         ret["rgb_overlay_path"] = str(
-            ASSET_DIR / "real_inpainting/bridge_real_eval_1.png"
+            ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20241209-141637/warm.jpg"
         )
         ret["rgb_overlay_cameras"] = ["3rd_view_camera"]
 
@@ -185,17 +188,23 @@ class PutOnBridgeInSceneEnv(PutOnInSceneEnv, CustomBridgeObjectsInSceneEnv):
         options = options.copy()
 
         self.set_episode_rng(seed)
+        
 
         obj_init_options = options.get("obj_init_options", {})
         obj_init_options = obj_init_options.copy()
+
+        # Episodes are defined by the distribution of xy configs of objects and robot poses and their rotations
+        # Runs a random episode from the total number of possible episodes
         episode_id = obj_init_options.get(
             "episode_id",
             self._episode_rng.randint(len(self._xy_configs) * len(self._quat_configs)),
         )
+        # xy_config for objects and robot for a particular episode
         xy_config = self._xy_configs[
             (episode_id % (len(self._xy_configs) * len(self._quat_configs)))
             // len(self._quat_configs)
         ]
+        # quat_config for objects and robot for a particular episode
         quat_config = self._quat_configs[episode_id % len(self._quat_configs)]
 
         options["model_ids"] = [self._source_obj_name, self._target_obj_name]
@@ -204,15 +213,26 @@ class PutOnBridgeInSceneEnv(PutOnInSceneEnv, CustomBridgeObjectsInSceneEnv):
         obj_init_options["init_xys"] = xy_config
         obj_init_options["init_rot_quats"] = quat_config
         options["obj_init_options"] = obj_init_options
-
+        
         obs, info = super().reset(seed=self._episode_seed, options=options)
         info.update({"episode_id": episode_id})
         return obs, info
 
     def _additional_prepackaged_config_reset(self, options):
         # use prepackaged robot evaluation configs under visual matching setup
+        # Real bench is 29.5 cm wide; the sim asset is 29.3 cm.
+        # For the sim asset, lower-left table corner (a,b) with respect to table center (tx,ty) is:
+        # a - tx = 0.146803 and b-ty = -0.379149 m.
+        # Due to the scene_offset parameter, the table center (tx, ty) is the origin for the simulation, and the coordinate 
+        # with respect to which all objects are measured.
+
+        real_robot_wrt_llc = [0.29, 0.225] # Real robot base position with respect to lower left corner. 
+        llc_wrt_origin = [0.146803, -0.379149] # Sim lower left corner with respect to origin
+        init_xy = [real_robot_wrt_llc[0] + llc_wrt_origin[0], real_robot_wrt_llc[1] + llc_wrt_origin[1]]
         options["robot_init_options"] = {
-            "init_xy": [0.147, 0.028],
+            "init_xy": [0.27,0.22],
+            # "init_xy": init_xy,
+            'init_height': self.scene_table_height + 0.04,
             "init_rot_quat": [0, 0, 0, 1],
         }
         return False
@@ -239,13 +259,14 @@ class PutOnBridgeInSceneEnv(PutOnInSceneEnv, CustomBridgeObjectsInSceneEnv):
             obj.name = model_id
             self.episode_objs.append(obj)
 
+# Initializes scene for carrot on plate task
 @register_env("PutCarrotOnPlateInScene-v0_IROM", max_episode_steps=60)
-class PutCarrotOnPlateInScene(PutOnBridgeInSceneEnv):
+class PutCarrotOnPlateInSceneIROM(PutOnBridgeInSceneEnvIROM):
     def __init__(self, **kwargs):
         source_obj_name = "bridge_carrot_generated_modified"
         target_obj_name = "bridge_plate_objaverse_larger"
 
-        xy_center = np.array([-0.16, 0.00])
+        xy_center = np.array([0.16, 0.00])
         half_edge_length_x = 0.075
         half_edge_length_y = 0.075
         grid_pos = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) * 2 - 1
@@ -259,12 +280,17 @@ class PutCarrotOnPlateInScene(PutOnBridgeInSceneEnv):
             for j, grid_pos_2 in enumerate(grid_pos):
                 if i != j:
                     xy_configs.append(np.array([grid_pos_1, grid_pos_2]))
-
+        
         quat_configs = [
             np.array([euler2quat(0, 0, np.pi), [1, 0, 0, 0]]),
             np.array([euler2quat(0, 0, -np.pi / 2), [1, 0, 0, 0]]),
         ]
-
+        
+        ### Illustrate origin
+        # source_obj_name = "bridge_carrot_generated_modified"
+        # target_obj_name = "bridge_carrot_generated_modified"
+        # xy_configs = [0*xy_configs[k] for k in range(len(xy_configs))]
+        
         super().__init__(
             source_obj_name=source_obj_name,
             target_obj_name=target_obj_name,

@@ -5,7 +5,7 @@ from mani_skill2_real2sim.agents.controllers import *
 from mani_skill2_real2sim.sensors.camera import CameraConfig
 from mani_skill2_real2sim.utils.sapien_utils import look_at
 
-
+from pdb import set_trace as st
 class WidowXDefaultConfig:
     def __init__(self) -> None:
         self.urdf_path = (
@@ -295,5 +295,35 @@ class WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
                 near=0.01,
                 far=10,
                 intrinsic = np.array([[623.588, 0, 319.501], [0, 623.588, 239.545], [0, 0, 1]])
+            )
+        ]
+
+####
+# Default parameters of IROM Lab Camera RealSense D435
+class IROM_WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
+    @property
+    def cameras(self):
+        return [
+            CameraConfig(
+                uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
+                # p=[0.13, 0.27, 1.24],
+                # q=look_at([0, 0, 0], [-1, -0.45, -1.05], [0, 0, 1]).q,
+                # actor_uid=None,
+                # p=[0.1524, -0.18, 0.29],
+                p=[0.15, -0.18, 0.29],
+                # q=[-0.907313, 0.0782, -0.36434, -0.194741], works well with initxy [0.28, -0.07]
+                q=[0.91483855, -0.0714471 ,  0.35117347,  0.18612614], # 42 deg pitch
+                # q=[0.9178682 , -0.06982009,  0.34317687,  0.1867425 ], # 41 deg pitch
+                # q=[ 0.91173907, -0.07306861,  0.3591438 ,  0.18549551], # 43 deg pitch
+                # q =[ 0.90509513, -0.08224013,  0.36344939,  0.20480211],
+                # q=[ 0.90432163, -0.08267466,  0.36536974,  0.20462708],
+                actor_uid="base_link",
+                width=640,
+                height=480,
+                fov=1.5,  # ignored if intrinsic is passed
+                near=0.01,
+                far=20,
+                intrinsic = np.array([[606.863, 0, 327.048], [0, 606.807, 242.418], [0, 0, 1]]) # RealSense RGB intrinsics
+                # intrinsic = np.array([[623.588, 0, 319.501], [0, 623.588, 239.545], [0, 0, 1]])
             )
         ]

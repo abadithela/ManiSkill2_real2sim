@@ -83,6 +83,9 @@ python mani_skill2_real2sim/examples/demo_manual_control_custom_envs.py -e PutEg
     -c arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos -o rgbd robot widowx_sink_camera_setup sim_freq @500 control_freq @5 \
     scene_name bridge_table_1_v2  rgb_overlay_mode debug rgb_overlay_path data/real_inpainting/bridge_sink.png rgb_overlay_cameras 3rd_view_camera
 
+python mani_skill2_real2sim/examples/demo_manual_control_custom_envs.py -e PutCarrotOnPlateInScene-v0_IROM --enable-sapien-viewer \
+-c arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos -o rgbd robot irom_widowx sim_freq @500 control_freq @5     scene_name bridge_table_1_v2  \
+rgb_overlay_mode debug rgb_overlay_path data/real_inpainting/irom_lab_camera_imgs/20241209-130908/warm.jpg rgb_overlay_cameras 3rd_view_camera
 """
 
 import argparse
@@ -95,6 +98,8 @@ from mani_skill2_real2sim.envs.sapien_env import BaseEnv
 from mani_skill2_real2sim.utils.visualization.cv2_utils import OpenCVViewer
 from mani_skill2_real2sim.utils.sapien_utils import look_at, normalize_vector
 from sapien.core import Pose
+
+from pdb import set_trace as st
 
 MS1_ENV_IDS = [
     "OpenCabinetDoor-v1",
@@ -119,6 +124,7 @@ def parse_args():
     print("opts:", opts)
     eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
     env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
+
     print("env_kwargs:", env_kwargs)
     args.env_kwargs = env_kwargs
 
@@ -146,7 +152,7 @@ def main():
             }
 
     from transforms3d.euler import euler2quat
-
+    
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
@@ -224,6 +230,15 @@ def main():
                         "init_rot_quat": init_rot_quat,
                     },
                 }
+            # TODO: fix if necessary 
+            elif env.robot_uid == "irom_widowx":
+                env_reset_options = {
+                    "obj_init_options": {},
+                    "robot_init_options": {
+                        "init_xy": [0.147, 0.028],
+                        "init_rot_quat": init_rot_quat,
+                    },
+                }
             elif env.robot_uid == "widowx_camera_setup2":
                 env_reset_options = {
                     "obj_init_options": {},
@@ -236,7 +251,7 @@ def main():
                 env_reset_options = {
                     "obj_init_options": {},
                     "robot_init_options": {
-                        "init_xy": [0.127, 0.060],
+                        "init_xy": [0.147, 0.028],
                         "init_rot_quat": init_rot_quat,
                     },
                 }
