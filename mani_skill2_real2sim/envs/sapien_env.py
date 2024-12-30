@@ -29,7 +29,7 @@ from mani_skill2_real2sim.utils.trimesh_utils import (
     merge_meshes,
 )
 from mani_skill2_real2sim.utils.visualization.misc import observations_to_images, tile_images
-
+from pdb import set_trace as st
 
 class BaseEnv(gym.Env):
     """Superclass for ManiSkill environments.
@@ -475,6 +475,7 @@ class BaseEnv(gym.Env):
         )  # we first set the first episode seed to allow environments to use it to reconfigure the environment with a seed
         self._elapsed_steps = 0
         reconfigure = options.get("reconfigure", False)
+        
         if reconfigure:
             # Reconfigure the scene if assets change
             self.reconfigure()
@@ -484,7 +485,6 @@ class BaseEnv(gym.Env):
         # Set the episode rng again after reconfiguration to guarantee seed reproducibility
         self.set_episode_rng(self._episode_seed)
         self.initialize_episode()
-
         return self.get_obs(), {}
 
     def set_main_rng(self, seed):
@@ -547,7 +547,6 @@ class BaseEnv(gym.Env):
     def step(self, action: Union[None, np.ndarray, Dict]):
         self.step_action(action)
         self._elapsed_steps += 1
-
         obs = self.get_obs()
         info = self.get_info(obs=obs)
         reward = self.get_reward(obs=obs, action=action, info=info)

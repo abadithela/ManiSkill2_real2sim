@@ -85,6 +85,7 @@ class PutOnInSceneEnvIROM(MoveNearInSceneEnv):
 
         pos_src = source_obj_pose.p
         pos_tgt = target_obj_pose.p
+        
         offset = pos_src - pos_tgt
         xy_flag = (
             np.linalg.norm(offset[:2])
@@ -172,11 +173,11 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         ret["control_freq"] = 5
         ret["sim_freq"] = 500
         ret["control_mode"] = "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos"
-        ret["scene_name"] = "bridge_table_1_v2"
+        ret["scene_name"] = "irom_bench"
         ret["camera_cfgs"] = {"add_segmentation": True}
         # This is the RGB overlay path that needs to change
         ret["rgb_overlay_path"] = str(
-            ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20241209-141637/warm.jpg"
+            ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20241219-173641/init_img.jpg"
         )
         ret["rgb_overlay_cameras"] = ["3rd_view_camera"]
 
@@ -186,34 +187,41 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         if options is None:
             options = dict()
         options = options.copy()
-
-        self.set_episode_rng(seed)
         
-
+        self.set_episode_rng(seed)
+    
         obj_init_options = options.get("obj_init_options", {})
         obj_init_options = obj_init_options.copy()
-
-        # Episodes are defined by the distribution of xy configs of objects and robot poses and their rotations
-        # Runs a random episode from the total number of possible episodes
-        episode_id = obj_init_options.get(
-            "episode_id",
-            self._episode_rng.randint(len(self._xy_configs) * len(self._quat_configs)),
-        )
-        # xy_config for objects and robot for a particular episode
-        xy_config = self._xy_configs[
-            (episode_id % (len(self._xy_configs) * len(self._quat_configs)))
-            // len(self._quat_configs)
-        ]
-        # quat_config for objects and robot for a particular episode
-        quat_config = self._quat_configs[episode_id % len(self._quat_configs)]
-
-        options["model_ids"] = [self._source_obj_name, self._target_obj_name]
-        obj_init_options["source_obj_id"] = 0
-        obj_init_options["target_obj_id"] = 1
-        obj_init_options["init_xys"] = xy_config
-        obj_init_options["init_rot_quats"] = quat_config
-        options["obj_init_options"] = obj_init_options
         
+        if "init_xys" not in obj_init_options.keys():
+            # Episodes are defined by the distribution of xy configs of objects and robot poses and their rotations
+            # Runs a random episode from the total number of possible episodes
+            episode_id = obj_init_options.get(
+                "episode_id",
+                self._episode_rng.randint(len(self._xy_configs) * len(self._quat_configs)),
+            )
+            # xy_config for objects and robot for a particular episode
+            xy_config = self._xy_configs[
+                (episode_id % (len(self._xy_configs) * len(self._quat_configs)))
+                // len(self._quat_configs)
+            ]
+            
+            # quat_config for objects and robot for a particular episode
+            quat_config = self._quat_configs[episode_id % len(self._quat_configs)]
+
+            options["model_ids"] = [self._source_obj_name, self._target_obj_name]
+            obj_init_options["source_obj_id"] = 0
+            obj_init_options["target_obj_id"] = 1
+            obj_init_options["init_xys"] = xy_config
+            obj_init_options["init_rot_quats"] = quat_config
+            options["obj_init_options"] = obj_init_options
+        else:
+            episode_id = 0
+            options["model_ids"] = [self._source_obj_name, self._target_obj_name]
+            obj_init_options["source_obj_id"] = 0
+            obj_init_options["target_obj_id"] = 1
+            options["obj_init_options"] = obj_init_options
+
         obs, info = super().reset(seed=self._episode_seed, options=options)
         info.update({"episode_id": episode_id})
         return obs, info
@@ -229,11 +237,17 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         real_robot_wrt_llc = [0.29, 0.225] # Real robot base position with respect to lower left corner. 
         llc_wrt_origin = [0.146803, -0.379149] # Sim lower left corner with respect to origin
         init_xy = [real_robot_wrt_llc[0] + llc_wrt_origin[0], real_robot_wrt_llc[1] + llc_wrt_origin[1]]
+        qpos = None
+        if "robot_init_options" in options.keys():
+            if "qpos" in options["robot_init_options"].keys():
+                qpos = options["robot_init_options"]["qpos"]
+
         options["robot_init_options"] = {
-            "init_xy": [0.27,0.22],
+            "init_xy": [0.245,0.22],
             # "init_xy": init_xy,
             'init_height': self.scene_table_height + 0.04,
             "init_rot_quat": [0, 0, 0, 1],
+            "qpos": qpos,
         }
         return False
 
@@ -243,7 +257,6 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
             self.episode_model_ids, self.episode_model_scales
         ):
             density = self.model_db[model_id].get("density", 1000)
-
             obj = self._build_actor_helper(
                 model_id,
                 self._scene,
@@ -266,26 +279,26 @@ class PutCarrotOnPlateInSceneIROM(PutOnBridgeInSceneEnvIROM):
         source_obj_name = "bridge_carrot_generated_modified"
         target_obj_name = "bridge_plate_objaverse_larger"
 
-        xy_center = np.array([0.16, 0.00])
-        half_edge_length_x = 0.075
-        half_edge_length_y = 0.075
+        xy_center = np.array([-0.1, 0.3])
+        half_edge_length_x = 0.05
+        half_edge_length_y = 0.05
         grid_pos = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) * 2 - 1
         grid_pos = (
             grid_pos * np.array([half_edge_length_x, half_edge_length_y])[None]
             + xy_center[None]
         )
-
+        
+        
         xy_configs = []
         for i, grid_pos_1 in enumerate(grid_pos):
             for j, grid_pos_2 in enumerate(grid_pos):
                 if i != j:
                     xy_configs.append(np.array([grid_pos_1, grid_pos_2]))
-        
+        #xy_configs = [np.array([[-0.25,  0.25],[-0.25,  0.45]])]
         quat_configs = [
             np.array([euler2quat(0, 0, np.pi), [1, 0, 0, 0]]),
             np.array([euler2quat(0, 0, -np.pi / 2), [1, 0, 0, 0]]),
         ]
-        
         ### Illustrate origin
         # source_obj_name = "bridge_carrot_generated_modified"
         # target_obj_name = "bridge_carrot_generated_modified"

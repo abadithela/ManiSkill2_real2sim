@@ -28,6 +28,7 @@ from mani_skill2_real2sim.utils.sapien_utils import (
 )
 
 from pdb import set_trace as st
+import time
 
 class CustomSceneEnv(BaseEnv):
     SUPPORTED_ROBOTS = {"google_robot_static": GoogleRobotStaticBase, 
@@ -174,13 +175,14 @@ class CustomSceneEnv(BaseEnv):
                 a = 0.146803
                 b = -0.379149
                 scene_offset = np.array([a+tx, b+ty,0]) # Table corner lower left
+                #scene_offset = np.array([-2.0634, -2.8313, 0.0])
             else:
                 raise NotImplementedError(f"Default scene offset for {self.robot_uid} is not yet set")
         else:
             scene_offset = np.array(self.scene_offset)
         
         if self.scene_pose is None:
-            scene_pose = sapien.Pose(q=[0.7, 0.707, 0, 0])  # y-axis up for Habitat scenes
+            scene_pose = sapien.Pose(q=[0.707, 0.707, 0, 0])  # y-axis up for Habitat scenes
         else:
             scene_pose = sapien.Pose(q=self.scene_pose)
             
@@ -245,6 +247,7 @@ class CustomSceneEnv(BaseEnv):
         sim_steps = int(self.sim_freq * t)
         for _ in range(sim_steps):
             self._scene.step()
+
     
     def reset(self, seed=None, options=None):
         self.robot_init_options = options.get("robot_init_options", {})
@@ -303,7 +306,7 @@ class CustomSceneEnv(BaseEnv):
                 qpos = np.array([-0.01840777,  0.0398835,   0.22242722,  -0.00460194,  1.36524296,  0.00153398, 0.037, 0.037])
             # TODO: Fix if necessary
             elif self.robot_uid == 'irom_widowx':
-                qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,
+                    qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,
                                  0.037]) # TODO: Initialize sleep position?
             elif self.robot_uid == 'widowx_sink_camera_setup' or self.robot_uid == "irom_widowx_sink_camera_setup":
                 qpos = np.array([-0.2600599, -0.12875618, 0.04461369, -0.00652761, 1.7033415, -0.26983038, 0.037,

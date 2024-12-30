@@ -12,7 +12,7 @@ from mani_skill2_real2sim.sensors.camera import CameraConfig
 from mani_skill2_real2sim.utils.sapien_utils import check_urdf_config, parse_urdf_config
 
 from .base_controller import BaseController, CombinedController, ControllerConfig
-
+from pdb import set_trace as st
 
 @dataclass
 class AgentConfig:

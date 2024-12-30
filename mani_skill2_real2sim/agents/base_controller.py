@@ -15,7 +15,6 @@ from .utils import (
     parameterize_path,
 )
 
-
 class BaseController:
     """Base class for controllers.
     The controller is an interface for the robot to interact with the environment.
@@ -263,7 +262,6 @@ class CombinedController(DictController):
         # Sanity check
         action_dim = self.action_space.shape[0]
         assert action.shape == (action_dim,), (action.shape, action_dim)
-
         for uid, controller in self.controllers.items():
             start, end = self.action_mapping[uid]
             controller.set_action(action[start:end])

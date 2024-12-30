@@ -12,7 +12,7 @@ from mani_skill2_real2sim.utils.registration import register_env
 from mani_skill2_real2sim.utils.sapien_utils import vectorize_pose
 
 from .base_env import CustomSceneEnv, CustomOtherObjectsInSceneEnv
-
+from pdb import set_trace as st
 
 class MoveNearInSceneEnv(CustomSceneEnv):
     DEFAULT_ASSET_ROOT: str
@@ -144,7 +144,7 @@ class MoveNearInSceneEnv(CustomSceneEnv):
         options = options.copy()
 
         self.obj_init_options = options.get("obj_init_options", {})
-
+        
         self.set_episode_rng(seed)
         model_scales = options.get("model_scales", None)
         model_ids = options.get("model_ids", None)
@@ -183,6 +183,7 @@ class MoveNearInSceneEnv(CustomSceneEnv):
                 sapien.Pose(q=euler2quat(0, 0, -0.09)) * sapien.Pose(q=[0, 0, 0, 1])
             ).q,
         }
+        st()
         new_urdf_version = self._episode_rng.choice(
             [
                 "",
@@ -281,8 +282,9 @@ class MoveNearInSceneEnv(CustomSceneEnv):
         assert obj_init_xys.shape == (len(self.episode_objs), 2)
 
         obj_init_z = self.obj_init_options.get("init_z", self.scene_table_height)
-        obj_init_z = obj_init_z + 0.5 # let object fall onto the table
-
+        #obj_init_z = obj_init_z + 0.5 # let object fall onto the table
+        obj_init_z = obj_init_z + 0.01 # let object fall onto the table
+        
         obj_init_rot_quats = self.obj_init_options.get("init_rot_quats", None)
         if obj_init_rot_quats is not None:
             obj_init_rot_quats = np.array(obj_init_rot_quats)
@@ -301,9 +303,10 @@ class MoveNearInSceneEnv(CustomSceneEnv):
         # Move the robot far away to avoid collision
         # The robot should be initialized later in _initialize_agent (in base_env.py)
         self.agent.robot.set_pose(sapien.Pose([-10, 0, 0]))
-
-        self._settle(0.5)
         
+        self._settle(0.5)
+        # self._settle(0.0)
+
         # Unlock motion
         for obj in self.episode_objs:
             obj.lock_motion(0, 0, 0, 0, 0, 0)
@@ -312,6 +315,7 @@ class MoveNearInSceneEnv(CustomSceneEnv):
             obj.set_velocity(np.zeros(3))
             obj.set_angular_velocity(np.zeros(3))
         self._settle(0.5)
+        # self._settle(0.0)
 
         # Some objects need longer time to settle
         lin_vel, ang_vel = 0.0, 0.0
@@ -320,6 +324,7 @@ class MoveNearInSceneEnv(CustomSceneEnv):
             ang_vel += np.linalg.norm(obj.angular_velocity)
         if lin_vel > 1e-3 or ang_vel > 1e-2:
             self._settle(1.5)
+            # self._settle(0.0)
 
         self.episode_obj_xyzs_after_settle = []
         for obj in self.episode_objs:
@@ -539,6 +544,7 @@ class MoveNearGoogleInSceneEnv(MoveNearInSceneEnv, CustomOtherObjectsInSceneEnv)
         episode_id = obj_init_options.get(
             "episode_id", self._episode_rng.randint(_num_episodes)
         )
+        
         triplet = self.triplets[
             episode_id // (len(self._source_obj_ids) * len(self._xy_config_per_triplet))
         ]
