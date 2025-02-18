@@ -4,7 +4,7 @@ from typing import Dict, List, Sequence
 import numpy as np
 import sapien.core as sapien
 from gymnasium import spaces
-
+from pdb import set_trace as st
 from mani_skill2_real2sim.utils.sapien_utils import get_entity_by_name
 
 

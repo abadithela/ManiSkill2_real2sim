@@ -183,7 +183,6 @@ class MoveNearInSceneEnv(CustomSceneEnv):
                 sapien.Pose(q=euler2quat(0, 0, -0.09)) * sapien.Pose(q=[0, 0, 0, 1])
             ).q,
         }
-        st()
         new_urdf_version = self._episode_rng.choice(
             [
                 "",

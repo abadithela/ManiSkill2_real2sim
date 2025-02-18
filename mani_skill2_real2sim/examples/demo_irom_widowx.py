@@ -44,7 +44,7 @@ python mani_skill2_real2sim/examples/demo_manual_control_custom_envs.py -e PutEg
 
 python mani_skill2_real2sim/examples/demo_irom_widowx.py -e PutCarrotOnPlateInScene-v0_IROM --enable-sapien-viewer \
 -c arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos -o rgbd robot irom_widowx sim_freq @500 control_freq @5     scene_name irom_bench  \
-rgb_overlay_mode debug rgb_overlay_path data/real_inpainting/irom_lab_camera_imgs/20241219-173641/init_img.jpg rgb_overlay_cameras 3rd_view_camera
+rgb_overlay_mode debug rgb_overlay_path data/real_inpainting/irom_lab_camera_imgs/20250105-115416/init_img.jpg rgb_overlay_cameras 3rd_view_camera
 """
 
 import argparse
@@ -90,6 +90,7 @@ def main():
     if "robot" in args.env_kwargs:
         if "widowx" in args.env_kwargs["robot"]:
             pose = look_at([1.0, 1.0, 2.0], [0.0, 0.0, 0.7])
+            pose = look_at([1.0, 0.25, 0.87], [0.0, 0.0, 0.7])
             args.env_kwargs["render_camera_cfgs"] = {
                 "render_camera": dict(p=pose.p, q=pose.q)
             }
@@ -143,11 +144,11 @@ def main():
                 env_reset_options = {
                     "obj_init_options": {},
                     "robot_init_options": {
-                        "init_xy": [0.245,0.22],
+                        "init_xy": [0.185,0.215], # [0.185,0.22]
                         # "init_xy": [-0.27,0.22],
                         # "init_xy": init_xy,
                         'init_height': env.scene_table_height + 0.04,
-                        "qpos": np.array([0.0076699042692780495, -1.8116313219070435, 1.5646604299545288, 0.003067961661145091, 0.8084079027175903, 0.0, 0.03757507726550102, -0.03757507726550102]),
+                        "qpos": np.array([0.0076699042692780495, -1.8116313219070435, 1.5646604299545288, 0.003067961661145091, 0.8084079027175903, 0.0, 0.03757507726550102, 0.03757507726550102]),
                     },
                 }
             elif env.robot_uid == "widowx_sink_camera_setup":
@@ -190,6 +191,7 @@ def main():
             env.agent.robot.pose.inv()
             * env.unwrapped._cameras["3rd_view_camera"].camera.pose,
         )
+    
     print("robot pose", env.agent.robot.pose)
     # env.obj.get_collision_shapes()[0].get_physical_material().static_friction / dynamic_friction / restitution # object material properties
     # Viewer

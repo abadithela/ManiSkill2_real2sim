@@ -306,14 +306,7 @@ class IROM_WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
         return [
             CameraConfig(
                 uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
-                # p=[0.13, 0.27, 1.24],
-                # q=look_at([0, 0, 0], [-1, -0.45, -1.05], [0, 0, 1]).q,
-                # actor_uid=None,
-                # p=[0.15, -0.18, 0.29],
-                # p=[0.15, -0.24, 0.285],
-                # irom lab angles:  angle = (0.0174533, 0.715585, 0.401426) roll (1deg), pitch (41deg), yaw (23deg)
-                #q = [ 0.91844253, -0.0618077 ,  0.34479341,  0.18374067],
-                p=[0.15, -0.21, 0.28],
+                p=[0.09, -0.21, 0.28], # [0.09, -0.21, 0.28],
                 # q = [ 0.91844253, -0.0618077 ,  0.34479341,  0.18374067],
                 q=[ 0.90533238, -0.07629484,  0.37500087,  0.18419208],
                 # original: q=[-0.907313, 0.0782, -0.36434, -0.194741],

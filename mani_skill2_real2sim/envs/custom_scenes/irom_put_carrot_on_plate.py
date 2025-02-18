@@ -4,6 +4,7 @@
 
 from collections import OrderedDict
 from typing import List
+import argparse
 
 import numpy as np
 import sapien.core as sapien
@@ -16,7 +17,7 @@ from mani_skill2_real2sim import ASSET_DIR
 
 from .base_env import CustomBridgeObjectsInSceneEnv
 from .move_near_in_scene import MoveNearInSceneEnv
-
+import math
 from pdb import set_trace as st 
 
 class PutOnInSceneEnvIROM(MoveNearInSceneEnv):
@@ -159,12 +160,14 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         target_obj_name: str = None,
         xy_configs: List[np.ndarray] = None,
         quat_configs: List[np.ndarray] = None,
+        warm = False,
         **kwargs,
     ):
         self._source_obj_name = source_obj_name
         self._target_obj_name = target_obj_name
         self._xy_configs = xy_configs
         self._quat_configs = quat_configs
+        self.warm=warm
         super().__init__(**kwargs)
 
     def _setup_prepackaged_env_init_config(self):
@@ -176,9 +179,14 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         ret["scene_name"] = "irom_bench"
         ret["camera_cfgs"] = {"add_segmentation": True}
         # This is the RGB overlay path that needs to change
-        ret["rgb_overlay_path"] = str(
-            ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20241219-173641/init_img.jpg"
-        )
+        if not self.warm:
+            ret["rgb_overlay_path"] = str(
+                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250125-162809/init_img.jpg"
+            )
+        else:
+            ret["rgb_overlay_path"] = str(
+                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250125-162809/warm.jpg"
+            )
         ret["rgb_overlay_cameras"] = ["3rd_view_camera"]
 
         return ret
@@ -189,7 +197,10 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         options = options.copy()
         
         self.set_episode_rng(seed)
-    
+        # Model scales:
+        # options["model_scales"] = [0.75, 1.154] # Carrot and plate
+        options["model_scales"] = [1.25, 1.154] # Carrot and plate
+
         obj_init_options = options.get("obj_init_options", {})
         obj_init_options = obj_init_options.copy()
         
@@ -220,6 +231,7 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
             options["model_ids"] = [self._source_obj_name, self._target_obj_name]
             obj_init_options["source_obj_id"] = 0
             obj_init_options["target_obj_id"] = 1
+            obj_init_options["init_rot_quats"] = self._quat_configs[0]
             options["obj_init_options"] = obj_init_options
 
         obs, info = super().reset(seed=self._episode_seed, options=options)
@@ -233,20 +245,20 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         # a - tx = 0.146803 and b-ty = -0.379149 m.
         # Due to the scene_offset parameter, the table center (tx, ty) is the origin for the simulation, and the coordinate 
         # with respect to which all objects are measured.
-
-        real_robot_wrt_llc = [0.29, 0.225] # Real robot base position with respect to lower left corner. 
-        llc_wrt_origin = [0.146803, -0.379149] # Sim lower left corner with respect to origin
-        init_xy = [real_robot_wrt_llc[0] + llc_wrt_origin[0], real_robot_wrt_llc[1] + llc_wrt_origin[1]]
+        
         qpos = None
         if "robot_init_options" in options.keys():
             if "qpos" in options["robot_init_options"].keys():
                 qpos = options["robot_init_options"]["qpos"]
 
+        self.robot_init_xy = [0.185,0.215]
+        self.robot_init_height = self.scene_table_height + 0.04
+        self.robot_init_quat = [0,0,0,1]
         options["robot_init_options"] = {
-            "init_xy": [0.245,0.22],
+            "init_xy": self.robot_init_xy, # [0.185,0.22]
             # "init_xy": init_xy,
-            'init_height': self.scene_table_height + 0.04,
-            "init_rot_quat": [0, 0, 0, 1],
+            'init_height': self.robot_init_height,
+            "init_rot_quat": self.robot_init_quat,
             "qpos": qpos,
         }
         return False
@@ -273,44 +285,96 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
             self.episode_objs.append(obj)
 
 # Initializes scene for carrot on plate task
-@register_env("PutCarrotOnPlateInScene-v0_IROM", max_episode_steps=60)
+@register_env("PutCarrotOnPlateInScene-v0_IROM", max_episode_steps=64)
 class PutCarrotOnPlateInSceneIROM(PutOnBridgeInSceneEnvIROM):
     def __init__(self, **kwargs):
-        source_obj_name = "bridge_carrot_generated_modified"
-        target_obj_name = "bridge_plate_objaverse_larger"
+        self.is_dir_light = kwargs.get("is_dir_light", True)
+        self.is_ambient_light = kwargs.get("is_ambient_light", True)
+        self.dir_light_position = kwargs.get("dir_light_position", [-0.5, 0, -math.sqrt(3)/2])
+        self.dir_light_color = kwargs.get("dir_light_color", [0.5,0.5,0.5])
+        self.ambient_light_color = kwargs.get("ambient_light_color", [0.3,0.3,0.3])
+        self.shadow = kwargs.get("shadow", True)
+        self.dir_light_scale = kwargs.get("dir_light_scale", 10)
+        self.shadow_map_size = kwargs.get("shadow_map_size", 2048)
 
-        xy_center = np.array([-0.1, 0.3])
-        half_edge_length_x = 0.05
-        half_edge_length_y = 0.05
-        grid_pos = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) * 2 - 1
-        grid_pos = (
-            grid_pos * np.array([half_edge_length_x, half_edge_length_y])[None]
-            + xy_center[None]
-        )
-        
-        
-        xy_configs = []
-        for i, grid_pos_1 in enumerate(grid_pos):
-            for j, grid_pos_2 in enumerate(grid_pos):
-                if i != j:
-                    xy_configs.append(np.array([grid_pos_1, grid_pos_2]))
-        #xy_configs = [np.array([[-0.25,  0.25],[-0.25,  0.45]])]
+        ## Original:
+        source_obj_name = "bridge_carrot_generated"
+        target_obj_name = "bridge_plate_objaverse_larger_irom"
+        carrot_scale = 1.25
+        plate_scale = 1.154
+
+        # source_obj_name = "bridge_carrot_generated_modified"
+        # target_obj_name = "bridge_plate_objaverse_larger_irom"
+        self.params = kwargs
+        self.xy_center = np.array([-0.0775, 0.17]) # Left red button position from lower left corner.
+        self.carrot_center = np.array([-0.05375, 0.019]) + self.xy_center
+        self.carrot_left = np.array([-0.05375, -0.0325]) + self.xy_center
+        self.carrot_right = np.array([-0.05375, 0.0775]) + self.xy_center
+        self.plate = np.array([-0.14, 0.355]) # From origin
+        xy_configs = [np.array([self.carrot_left, self.plate]), np.array([self.carrot_center, self.plate]), np.array([self.carrot_right, self.plate])]
         quat_configs = [
             np.array([euler2quat(0, 0, np.pi), [1, 0, 0, 0]]),
-            np.array([euler2quat(0, 0, -np.pi / 2), [1, 0, 0, 0]]),
         ]
-        ### Illustrate origin
-        # source_obj_name = "bridge_carrot_generated_modified"
-        # target_obj_name = "bridge_carrot_generated_modified"
-        # xy_configs = [0*xy_configs[k] for k in range(len(xy_configs))]
+
+        # Applying the model scaling
+        self.warm = False # Apply the warm filter or not
         
         super().__init__(
             source_obj_name=source_obj_name,
             target_obj_name=target_obj_name,
             xy_configs=xy_configs,
             quat_configs=quat_configs,
+            warm=self.warm,
             **kwargs,
         )
 
+    def get_plate(self):
+        return self.plate
+    
+    def get_carrot(self):
+        return self.carrot_left, self.carrot_center, self.carrot_right
+    
+    def get_xy_center(self):
+        return self.xy_center
+    
     def get_language_instruction(self, **kwargs):
-        return "put carrot on plate"
+        # return "put carrot on plate" # Original put carrot on plate command
+        return "place the carrot on yellow plate" # Different command
+    
+    def _initialize_actors(self):
+        # Move the robot far away to avoid collision
+        # self.agent.robot.set_pose(sapien.Pose([-10, 0, 0])) # Original
+        self.agent.robot.set_pose(sapien.Pose([-10, 0, 0]))
+        super()._initialize_actors()
+
+    def add_lighting_params(self, **light_kwargs):
+        self.is_dir_light = light_kwargs.get("is_dir_light", True)
+        self.is_ambient_light = light_kwargs.get("is_ambient_light", True)
+        self.dir_light_position = light_kwargs.get("dir_light_position", [-0.5, 0, -math.sqrt(3)/2])
+        self.dir_light_color = light_kwargs.get("dir_light_color", [0.5,0.5,0.5])
+        self.ambient_light_color = light_kwargs.get("ambient_light_color", [0.3,0.3,0.3])
+        self.shadow = light_kwargs.get("shadow", True)
+        self.dir_light_scale = light_kwargs.get("dir_light_scale", 10)
+        self.shadow_map_size = light_kwargs.get("shadow_map_size", 2048)
+        
+    def _setup_lighting(self):
+        if self.bg_name is not None:
+            return
+        self.enable_shadow = self.shadow ## Check this and make sure it doesn't break things anywhere else
+        if self.is_ambient_light:
+            self._scene.set_ambient_light(self.ambient_light_color) # Keeping the magnitude same keeps the color the same
+        
+        if self.is_dir_light:
+            self._scene.add_directional_light(
+                self.dir_light_position, # originally on top: [0,0,-1]
+                self.dir_light_color,
+                position=[0, 0, 1],
+                shadow=self.enable_shadow,
+                scale=self.dir_light_scale,
+                shadow_map_size=self.shadow_map_size,
+            )
+
+    def set_carrot_poses(self, center, left, right):
+        self.carrot_center = center
+        self.carrot_left = left
+        self.carrot_right = right

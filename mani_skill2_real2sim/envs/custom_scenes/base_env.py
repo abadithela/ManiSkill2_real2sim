@@ -491,7 +491,7 @@ class CustomOtherObjectsInSceneEnv(CustomSceneEnv):
                     "(for example, you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data and set the env variable to the downloaded directory). "
                     "Additionally, for assets in the original ManiSkill2 repo, you can copy the assets into the directory that corresponds to MS2_REAL2SIM_ASSET_DIR."
                 )
-
+            
             collision_file = model_dir / "collision.obj"
             if not collision_file.exists():
                 raise FileNotFoundError(
@@ -526,6 +526,7 @@ class CustomOtherObjectsInSceneEnv(CustomSceneEnv):
         builder.add_visual_from_file(filename=visual_file, scale=[scale] * 3)
 
         actor = builder.build()
+        
         return actor
                 
                 
