@@ -181,11 +181,11 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
         # This is the RGB overlay path that needs to change
         if not self.warm:
             ret["rgb_overlay_path"] = str(
-                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250125-162809/init_img.jpg"
+                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250225-144256/init_img.jpg"
             )
         else:
             ret["rgb_overlay_path"] = str(
-                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250125-162809/warm.jpg"
+                ASSET_DIR / "real_inpainting/irom_lab_camera_imgs/20250225-144256/warm.jpg"
             )
         ret["rgb_overlay_cameras"] = ["3rd_view_camera"]
 
@@ -251,8 +251,10 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
             if "qpos" in options["robot_init_options"].keys():
                 qpos = options["robot_init_options"]["qpos"]
 
-        self.robot_init_xy = [0.185,0.215]
-        self.robot_init_height = self.scene_table_height + 0.04
+        # self.robot_init_xy = [0.185,0.215] # OLd setup
+        self.robot_init_xy = [0.194,0.191] # new setup
+        self.robot_init_height = self.scene_table_height + 0.035
+
         self.robot_init_quat = [0,0,0,1]
         options["robot_init_options"] = {
             "init_xy": self.robot_init_xy, # [0.185,0.22]

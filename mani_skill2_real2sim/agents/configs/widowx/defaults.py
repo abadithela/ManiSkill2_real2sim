@@ -4,6 +4,7 @@ import numpy as np
 from mani_skill2_real2sim.agents.controllers import *
 from mani_skill2_real2sim.sensors.camera import CameraConfig
 from mani_skill2_real2sim.utils.sapien_utils import look_at
+from transforms3d.euler import euler2quat, quat2euler
 
 from pdb import set_trace as st
 class WidowXDefaultConfig:
@@ -300,7 +301,8 @@ class WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
 
 ####
 # Default parameters of IROM Lab Camera RealSense D435
-class IROM_WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
+# Version v0 valid for image timestamp 20250125-162809
+class IROM_WidowXSinkCameraSetupConfig_v0(WidowXDefaultConfig):
     @property
     def cameras(self):
         return [
@@ -309,6 +311,35 @@ class IROM_WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
                 p=[0.09, -0.21, 0.28], # [0.09, -0.21, 0.28],
                 # q = [ 0.91844253, -0.0618077 ,  0.34479341,  0.18374067],
                 q=[ 0.90533238, -0.07629484,  0.37500087,  0.18419208],
+                # original: q=[-0.907313, 0.0782, -0.36434, -0.194741],
+                actor_uid="base_link",
+                width=640,
+                height=480,
+                fov=1.5,  # ignored if intrinsic is passed
+                near=0.01,
+                far=20,
+                intrinsic = np.array([[606.863, 0, 327.048], [0, 606.807, 242.418], [0, 0, 1]]) # RealSense RGB intrinsics
+                # intrinsic = np.array([[623.588, 0, 319.501], [0, 623.588, 239.545], [0, 0, 1]])
+            )
+        ]
+    
+####
+# Default parameters of IROM Lab Camera RealSense D435 for timestamp 
+class IROM_WidowXSinkCameraSetupConfig(WidowXDefaultConfig):
+    @property
+    def cameras(self):
+        return [
+            CameraConfig(
+                uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
+                #p=[0.1143, -0.2159, 0.28], # [0.09, -0.21, 0.28],
+                p=[0.07, -0.198, 0.285],
+                # q = [ 0.91844253, -0.0618077 ,  0.34479341,  0.18374067],
+                # q=[ 0.90533238, -0.07629484,  0.37500087,  0.18419208], # v0
+                # q=[ 0.90857032, -0.0746846 ,  0.3670863 ,  0.18485085], # angles_pitch
+                # q=[ 0.90857032, -0.0746846 ,  0.3670863 ,  0.18485085],
+                #q=[ 0.90824965, -0.07484587,  0.36787898,  0.18478561], # current angles_pitch
+                # q= [0.9073239068108966, -0.08855064582503164, 0.3642205874080181, 0.19043496255031367], #Best
+                q=[0.9089291108554157, -0.08776779581939048, 0.360248232664074, 0.1906984434100085],
                 # original: q=[-0.907313, 0.0782, -0.36434, -0.194741],
                 actor_uid="base_link",
                 width=640,

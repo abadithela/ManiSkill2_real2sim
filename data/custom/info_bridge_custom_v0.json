@@ -35,6 +35,24 @@
     ],
     "density": 700
   },
+  "bridge_carrot_generated_fat_modified": {
+    "bbox": {
+      "min": [
+        -0.0585,
+        -0.0161,
+        -0.0206
+      ],
+      "max": [
+        0.0585,
+        0.0161,
+        0.0206
+      ]
+    },
+    "scales": [
+      1.0
+    ],
+    "density": 700
+  },
   "bridge_plate_objaverse": {
     "bbox": {
       "min": [
@@ -54,6 +72,24 @@
     "density": 1000
   },
   "bridge_plate_objaverse_larger": {
+    "bbox": {
+      "min": [
+        -0.055,
+        -0.055,
+        -0.003
+      ],
+      "max": [
+        0.055,
+        0.055,
+        0.003
+      ]
+    },
+    "scales": [
+      1.0
+    ],
+    "density": 1000
+  },
+  "bridge_plate_objaverse_larger_irom": {
     "bbox": {
       "min": [
         -0.055,
