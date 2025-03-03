@@ -356,8 +356,12 @@ class PutCarrotOnPlateInSceneIROM(PutOnBridgeInSceneEnvIROM):
         self.dir_light_color = light_kwargs.get("dir_light_color", [0.5,0.5,0.5])
         self.ambient_light_color = light_kwargs.get("ambient_light_color", [0.3,0.3,0.3])
         self.shadow = light_kwargs.get("shadow", True)
-        self.dir_light_scale = light_kwargs.get("dir_light_scale", 10)
+        self.dir_light_scale = light_kwargs.get("dir_light_scale", 5)
         self.shadow_map_size = light_kwargs.get("shadow_map_size", 2048)
+        # self.original_lighting=False
+        # self.slightly_brighter_lighting = True
+        # self.slightly_darker_lighting=False
+        # self.ambient_only_lighting=False
         
     def _setup_lighting(self):
         if self.bg_name is not None:
@@ -375,6 +379,69 @@ class PutCarrotOnPlateInSceneIROM(PutOnBridgeInSceneEnvIROM):
                 scale=self.dir_light_scale,
                 shadow_map_size=self.shadow_map_size,
             )
+    
+    # def _setup_lighting(self):
+    #     if self.bg_name is not None:
+    #         return
+
+    #     shadow = self.enable_shadow
+
+    #     self._scene.set_ambient_light([0.3, 0.3, 0.3])
+    #     self._scene.add_directional_light(
+    #         [0, 0, -1],
+    #         [0.3, 0.3, 0.3],
+    #         position=[0, 0, 1],
+    #         shadow=shadow,
+    #         scale=5,
+    #         shadow_map_size=2048,
+    #     )
+
+    # def _setup_lighting(self):
+    #     if self.bg_name is not None:
+    #         return
+
+    #     shadow = self.enable_shadow
+    #     if self.original_lighting:
+    #         self._scene.set_ambient_light([0.3, 0.3, 0.3])
+    #         self._scene.add_directional_light(
+    #             [1, 1, -1], [1, 1, 1], shadow=shadow, scale=5, shadow_map_size=2048
+    #         )
+    #         self._scene.add_directional_light([0, 0, -1], [1, 1, 1])
+    #     elif self.slightly_darker_lighting:
+    #         self._scene.set_ambient_light([0.3, 0.3, 0.3])
+    #         self._scene.add_directional_light(
+    #             [1, 1, -1],
+    #             [0.8, 0.8, 0.8],
+    #             shadow=shadow,
+    #             scale=5,
+    #             shadow_map_size=2048,
+    #         )
+    #         self._scene.add_directional_light([0, 0, -1], [0.8, 0.8, 0.8])
+    #     elif self.slightly_brighter_lighting:
+    #         self._scene.set_ambient_light([0.3, 0.3, 0.3])
+    #         self._scene.add_directional_light(
+    #             [0, 0, -1],
+    #             [3.6, 3.6, 3.6],
+    #             shadow=shadow,
+    #             scale=5,
+    #             shadow_map_size=2048,
+    #         )
+    #         self._scene.add_directional_light([-1, -0.5, -1], [1.3, 1.3, 1.3])
+    #         self._scene.add_directional_light([1, 1, -1], [1.3, 1.3, 1.3])
+    #     elif self.ambient_only_lighting:
+    #         self._scene.set_ambient_light([1.0, 1.0, 1.0])
+    #     else:
+    #         # Default lighting
+    #         self._scene.set_ambient_light([0.3, 0.3, 0.3])
+    #         self._scene.add_directional_light(
+    #             [0, 0, -1],
+    #             [2.2, 2.2, 2.2],
+    #             shadow=shadow,
+    #             scale=5,
+    #             shadow_map_size=2048,
+    #         )
+    #         self._scene.add_directional_light([-1, -0.5, -1], [0.7, 0.7, 0.7])
+    #         self._scene.add_directional_light([1, 1, -1], [0.7, 0.7, 0.7])
 
     def set_carrot_poses(self, center, left, right):
         self.carrot_center = center
