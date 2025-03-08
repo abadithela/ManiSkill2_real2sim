@@ -171,6 +171,9 @@ class IROM_WidowX(BaseAgent):
     def base_pose(self):
         return self.base_link.get_pose()
 
+    @property
+    def get_qpos_command(self):
+        return self.controllers[self._control_mode].controllers['arm']._target_qpos
 
 class IROM_WidowXBridgeDatasetCameraSetup(IROM_WidowX):
     _config: defaults.IROM_WidowXSinkCameraSetupConfig
