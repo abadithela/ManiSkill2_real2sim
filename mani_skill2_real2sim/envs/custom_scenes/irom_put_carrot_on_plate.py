@@ -252,7 +252,7 @@ class PutOnBridgeInSceneEnvIROM(PutOnInSceneEnvIROM, CustomBridgeObjectsInSceneE
                 qpos = options["robot_init_options"]["qpos"]
 
         # self.robot_init_xy = [0.185,0.215] # OLd setup
-        self.robot_init_xy = [0.194,0.191] # new setup
+        self.robot_init_xy = [0.195,0.19] # new setup
         self.robot_init_height = self.scene_table_height + 0.035
 
         self.robot_init_quat = [0,0,0,1]
